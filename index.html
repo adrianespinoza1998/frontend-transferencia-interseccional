@@ -287,6 +287,7 @@ var INTENT =
 "Eres el intérprete de consultas de un asistente que compara iniciativas de inversión social entre minería y acuicultura. Lee la conversación y clasifica el último mensaje de la persona.\n\n"+
 "Hoja Familias de iniciativas del archivo del equipo. Elige la familia por su definición, no por el parecido del nombre. Usa el nombre exactamente como está escrito, o null:\n"+HOJA_FAMILIAS+"\n\n"+
 "Para analizar transferencia se necesitan tres cosas: (1) el ámbito de la iniciativa, (2) el contexto de destino, es decir el sector y el territorio donde trabaja la persona, (3) qué decisión de diseño quiere apoyar. El contexto de destino no es opcional: sin él solo hay un listado, no un análisis. Si falta alguna, pide UNA sola, la que más cambiaría el resultado.\n\n"+
+"Si alguno de esos datos aparece más abajo bajo 'Contexto de destino ya establecido', queda vigente aunque el último mensaje no lo repita: cópialo tal cual en tu respuesta y no lo pidas de nuevo, salvo que la persona lo esté corrigiendo explícitamente.\n\n"+
 "Responde solo con un objeto JSON:\n"+
 '{"tipo":"buscar"|"aclarar","familia":string|null,"ambito":string|null,"industria_destino":"Minería"|"Acuicultura"|null,"territorio":string|null,"comunidad":string|null,"decision":string|null,"texto":string,"pregunta":string|null}\n\n'+
 '"texto" son palabras clave útiles para buscar. Si la persona ya dio las tres cosas, "tipo":"buscar" y "pregunta":null. Si falta algo, "tipo":"aclarar" y "pregunta" es la única pregunta, breve y en segunda persona.';
@@ -503,6 +504,7 @@ function errCopy(code){
 }
 
 var turns=[], busy=false;
+var ctx={industria_destino:null, territorio:null, comunidad:null, decision:null};
 async function enviar(text){
   if(busy || !text.trim()) return;
   busy=true; document.getElementById('send').disabled=true;
@@ -518,7 +520,17 @@ async function enviar(text){
 
   try{
     var hist = turns.slice(-6).map(function(t){return (t.role==='user'?'Persona: ':'Asistente: ')+t.content;}).join('\n');
-    var it = await backend.json(INTENT+'\n\nConversación:\n'+hist, {modelTier:'quick', cache:false});
+    var ctxTxt = 'Contexto de destino ya establecido en la conversación:\n'+
+      '  sector: '+(ctx.industria_destino||'no declarado')+'\n'+
+      '  territorio: '+(ctx.territorio||'no declarado')+'\n'+
+      '  tipo de comunidad: '+(ctx.comunidad||'no declarado')+'\n'+
+      '  decisión que quiere apoyar: '+(ctx.decision||'no declarada')+'\n\n';
+    var it = await backend.json(INTENT+'\n\n'+ctxTxt+'Conversación:\n'+hist, {modelTier:'quick', cache:false});
+    /* si el clasificador declaró un valor nuevo, queda para el resto de la sesión;
+       si no, se completa con lo ya establecido, para no depender de que el modelo lo repita */
+    ['industria_destino','territorio','comunidad','decision'].forEach(function(k){
+      if(it[k]) ctx[k]=it[k]; else it[k]=ctx[k];
+    });
 
     if(it.tipo==='aclarar' && it.pregunta){
       paintProse(slot.prose, it.pregunta);
