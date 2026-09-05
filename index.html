@@ -311,7 +311,7 @@ function apiBackend(){
       method:'POST',
       headers:{'content-type':'application/json','x-api-key':getKey(),
                'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body: JSON.stringify({model:getModel(), max_tokens:2000, messages:merged})
+      body: JSON.stringify({model:getModel(), max_tokens:8000, messages:merged})
     });
     if(!r.ok){
       var body = await r.text();
@@ -320,6 +320,12 @@ function apiBackend(){
     }
     var d = await r.json();
     var text = (d.content||[]).filter(function(b){return b.type==='text';}).map(function(b){return b.text;}).join('\n');
+    /* con razonamiento extendido, max_tokens cubre el pensamiento y la respuesta:
+       si el modelo agota el presupuesto pensando, no queda ningún bloque de texto */
+    if(!text.trim()){
+      throw {code: d.stop_reason==='max_tokens' ? 'truncated' : 'empty_response',
+             message:'stop_reason=' + d.stop_reason};
+    }
     if(opts.onText) opts.onText({text:text, delta:text});
     return {text:text};
   }
@@ -488,6 +494,8 @@ function errCopy(code){
     case 'not_granted': return 'La llave fue rechazada o este visor no tiene habilitado el uso de Claude. Revise la llave y el nombre del modelo.';
     case 'rate_limited': return 'Demasiadas consultas seguidas. Espere un momento y reenvíe.';
     case 'session_expired': return 'La sesión expiró. Inicie sesión otra vez.';
+    case 'truncated': return 'El modelo agotó su presupuesto de tokens razonando y no alcanzó a escribir la respuesta. Reenvíe la consulta acotándola a un ámbito más estrecho, o pida menos casos.';
+    case 'empty_response': return 'El modelo devolvió una respuesta vacía. Reenvíe la consulta.';
     case 'invalid_json': return 'La respuesta no llegó en el formato esperado. Reenvíe la consulta.';
     case 'refused': return 'El modelo no respondió a esta entrada. Reformule la consulta.';
     default: return 'La consulta falló por un problema del servicio o de la red. Vuelva a enviarla.';
@@ -534,10 +542,25 @@ async function enviar(text){
     ];
 
     slot.prose.textContent='Recorriendo las dimensiones de transferencia…';
-    var res = await backend(input,{cache:false, onText:function(u){
-      var m=u.text.match(/PROSA\s*([\s\S]*?)(?=\nCASO |$)/);
-      if(m && m[1].trim()) paintProse(slot.prose, m[1].trim());
-    }});
+    var res;
+    try{
+      res = await backend(input,{cache:false, onText:function(u){
+        var m=u.text.match(/PROSA\s*([\s\S]*?)(?=\nCASO |$)/);
+        if(m && m[1].trim()) paintProse(slot.prose, m[1].trim());
+      }});
+    }catch(e1){
+      /* si se agotó el presupuesto, reintentar con menos casos: menos análisis, misma regla */
+      if(e1 && (e1.code==='truncated' || e1.code==='empty_response') && cands.length>3){
+        var pocos = cands.slice(0,3);
+        slot.prose.textContent='La respuesta se cortó. Reintentando con tres casos en vez de '+cands.length+'…';
+        input[1].content = hojasBloque(pocos.map(casoTxt).join('\n'), pocos.length)
+                         + input[1].content.slice(input[1].content.indexOf('\n\nContexto de destino'));
+        res = await backend(input,{cache:false, onText:function(u){
+          var m=u.text.match(/PROSA\s*([\s\S]*?)(?=\nCASO |$)/);
+          if(m && m[1].trim()) paintProse(slot.prose, m[1].trim());
+        }});
+      } else { throw e1; }
+    }
     var cont=el('div'); slot.node.replaceChild(cont, slot.prose);
     paintFull(cont, res.text, contexto);
     turns.push({role:'assistant',content:res.text.slice(0,1800)});
