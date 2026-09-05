@@ -47,7 +47,16 @@ h1{font-family:"Newsreader",Georgia,serif;font-weight:400;font-size:30px;line-he
 .who{font-size:11.5px;color:var(--stone);margin-bottom:6px}
 .prose{font-family:"Newsreader",Georgia,serif;font-size:17px;line-height:1.55;max-width:66ch}
 .prose p{margin:0 0 .7em}.prose p:last-child{margin-bottom:0}
-.thinking{color:var(--ink-2);font-style:italic}
+.thinking{
+  font-style:italic;
+  background:linear-gradient(90deg, var(--ink-2) 40%, var(--ink) 50%, var(--ink-2) 60%);
+  background-size:200% 100%;
+  background-position:-100% 0;
+  -webkit-background-clip:text; background-clip:text;
+  color:transparent; -webkit-text-fill-color:transparent;
+  animation:shimmer 1.6s ease-in-out infinite;
+}
+@keyframes shimmer{ to{ background-position:100% 0; } }
 .err{border-left:3px solid var(--amber);padding-left:12px;color:var(--ink-2);font-size:14px}
 
 .caso{border:1px solid var(--rule);background:var(--card);margin-top:14px;box-shadow:var(--shadow)}
@@ -86,6 +95,7 @@ h1{font-family:"Newsreader",Georgia,serif;font-weight:400;font-size:30px;line-he
 :root[data-theme="dark"] .composer button{color:#121815}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .composer button{color:#121815}}
 .composer button[disabled]{opacity:.45;cursor:default}
+.composer textarea[disabled]{opacity:.5;cursor:not-allowed}
 .hints{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 .hints button{font:inherit;font-size:13px;text-align:left;padding:6px 10px;background:transparent;border:1px dashed var(--rule);color:var(--ink-2);cursor:pointer;border-radius:2px}
 .hints button:hover{border-style:solid;color:var(--ink)}
@@ -110,7 +120,10 @@ aside .note{font-size:12.5px;color:var(--ink-2);margin:0 0 12px}
 
 footer{margin-top:44px;border-top:1px solid var(--rule);padding-top:16px;font-size:12.5px;color:var(--ink-2);max-width:78ch}
 footer p{margin:0 0 8px}
-@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+@media (prefers-reduced-motion:reduce){
+  *{transition:none!important;animation:none!important}
+  .thinking{background:none; -webkit-text-fill-color:currentColor; color:var(--ink-2)}
+}
 </style>
 </head>
 <body>
@@ -508,6 +521,8 @@ var ctx={industria_destino:null, territorio:null, comunidad:null, decision:null}
 async function enviar(text){
   if(busy || !text.trim()) return;
   busy=true; document.getElementById('send').disabled=true;
+  document.getElementById('msg').disabled=true;
+  document.getElementById('msg').placeholder='Esperando respuesta…';
   addYou(text); turns.push({role:'user',content:text});
   var slot=addBot();
 
@@ -515,7 +530,10 @@ async function enviar(text){
     slot.prose.classList.remove('thinking'); slot.prose.innerHTML='';
     slot.prose.appendChild(el('p','err','Falta conectar el asistente. Ingrese su llave de API en el recuadro de arriba, o abra este archivo desde claude.ai.'));
     document.getElementById('setup').hidden=false;
-    busy=false; document.getElementById('send').disabled=false; return;
+    busy=false; document.getElementById('send').disabled=false;
+    document.getElementById('msg').disabled=false;
+    document.getElementById('msg').placeholder='Qué está diseñando, dónde, y qué necesita decidir…';
+    return;
   }
 
   try{
@@ -582,6 +600,8 @@ async function enviar(text){
     slot.prose.appendChild(el('p','err', errCopy(e && e.code)));
   }finally{
     busy=false; document.getElementById('send').disabled=false;
+    document.getElementById('msg').disabled=false;
+    document.getElementById('msg').placeholder='Qué está diseñando, dónde, y qué necesita decidir…';
   }
 }
 
