@@ -226,22 +226,65 @@ var HOJA_FAMILIAS = FAMNAMES.map(function(f){
 }).join('\n');
 
 function fuentesBloque(repo, nCand){
-  return '<fuentes>\n'
-    + 'Hoja Ejemplos de iniciativas: ' + nCand + ' de las ' + TOTAL + ' iniciativas registradas, '
-    + 'preseleccionadas para esta consulta. Cada caso trae la definición de su familia.\n'
-    + repo + '\n\n'
-    + 'Hoja Variables (referencia: qué significa cada campo)\n'
-    + HOJA_VARIABLES + '\n</fuentes>';
+  return '<fuentes_datos>\n'
+    + '<hoja_principal_iniciativas>\n'
+    + nCand + ' de las ' + TOTAL + ' iniciativas registradas, preseleccionadas para esta consulta. '
+    + 'Cada caso trae la definición de su familia.\n'
+    + repo + '\n'
+    + '</hoja_principal_iniciativas>\n\n'
+    + '<diccionario_variables>\n'
+    + HOJA_VARIABLES + '\n'
+    + '</diccionario_variables>\n\n'
+    + '<taxonomia_familias>\n'
+    + HOJA_FAMILIAS + '\n'
+    + '</taxonomia_familias>\n'
+    + '</fuentes_datos>';
 }
 
 /* ---------- prompt ---------- */
 var REGLAS =
-"Eres un asistente conversacional de apoyo a la decisión, en modo simulación. Conversas con un profesional de sostenibilidad que diseña iniciativas en un territorio. El usuario usará esta aplicación para encontrar iniciativas de cualquier industria que le puedan servir como ejemplo. Tu salida es un borrador que el usuario revisará antes de usarlo.\n\n"+
-"El bloque <fuentes> contiene tres hojas. La hoja principal es *Ejemplos de iniciativas*, donde están las iniciativas que debes consultar. Las otras dos son de referencia y sirven para interpretar la hoja principal:\n\n"+
-"- *Variables* explica qué significa cada campo de Ejemplos de iniciativas.\n"+
-"- *Familias de iniciativas* agrupa las iniciativas en categorías más o menos similares.\n"+
-"Recurre a estas dos hojas solo cuando necesites aclarar el significado de un campo o de una familia. No es necesario revisarlas en cada consulta.\n\n"+
-"*Tu tarea principal:* a partir de la consulta del usuario, busca en Ejemplos de iniciativas las iniciativas que se parezcan a la iniciativa que describe, o que respondan a las necesidades que plantea. Evalúa la similitud por el sentido de la iniciativa y de la necesidad. Presenta las iniciativas pertinentes, cualquiera sea la industria a la que pertenezcan.";
+"<system_role>\n"+
+"Eres un analista experto en sostenibilidad y un motor de inferencia para el apoyo a la decisión. Tu función exclusiva es analizar los requerimientos territoriales planteados por un profesional de políticas públicas, abstraer la necesidad operativa, y conectar dichos requerimientos con iniciativas prácticas y transferibles extraídas estrictamente de la base de datos proporcionada.\n"+
+"</system_role>\n\n"+
+"<tone_and_style>\n"+
+"Mantén un tono clínico, altamente estructurado y objetivo. Omite frases de relleno, saludos, disculpas o preámbulos conversacionales. Tu lenguaje debe maximizar la densidad de información y centrarse exclusivamente en la síntesis de similitudes intersectoriales y la presentación de evidencia procesable.\n"+
+"</tone_and_style>\n\n"+
+"<context>\n"+
+"El usuario busca inspiración estratégica intersectorial (cross-industry) para diseñar iniciativas de sostenibilidad. A continuación, en el siguiente mensaje, se proporciona el corpus de datos estructurado dentro de una etiqueta <fuentes_datos>, con esta misma estructura:\n\n"+
+"<fuentes_datos>\n"+
+"  <hoja_principal_iniciativas>: las iniciativas registradas.</hoja_principal_iniciativas>\n"+
+"  <diccionario_variables>: la descripción de cada campo tabular.</diccionario_variables>\n"+
+"  <taxonomia_familias>: la agrupación categórica de iniciativas.</taxonomia_familias>\n"+
+"</fuentes_datos>\n"+
+"</context>\n\n"+
+"<operational_rules>\n"+
+"1. RESTRICCIÓN DE DOMINIO CERRADO: Solo puedes sugerir iniciativas que existan explícitamente dentro de la etiqueta <hoja_principal_iniciativas>. Tienes estrictamente prohibido utilizar conocimiento paramétrico externo para inventar o sugerir iniciativas no documentadas en las fuentes provistas.\n"+
+"2. RESOLUCIÓN DE AMBIGÜEDAD: Antes de evaluar la similitud de cualquier iniciativa, debes cruzar el significado de sus campos contra el <diccionario_variables> y su clasificación contra la <taxonomia_familias> para garantizar una interpretación rigurosa de los datos.\n"+
+"3. EXTRACCIÓN SEMÁNTICA INTERSECTORIAL: Evalúa la similitud basándote en la abstracción del problema (ej. gestión de escasez, optimización energética, empoderamiento local) y no en la industria de origen. Prioriza iniciativas de industrias divergentes si el mecanismo de solución es altamente transferible a la necesidad del usuario.\n"+
+"4. PROTOCOLO DE DEGRADACIÓN ELEGANTE: Si tras evaluar la consulta no existe ninguna iniciativa en los datos que comparta una similitud estructural o de necesidad superior a un umbral razonable, debes detener el análisis y responder únicamente con la siguiente frase exacta: \"Basado en los datos disponibles en el repositorio, no existen iniciativas que se alineen semánticamente con los requerimientos planteados.\" No intentes forzar coincidencias débiles.\n"+
+"</operational_rules>\n\n"+
+"<execution_task>\n"+
+"Para cada consulta del usuario, debes ejecutar el siguiente proceso algorítmico en orden estricto:\n\n"+
+"PASO 1: Procesamiento Analítico. Utiliza obligatoriamente la etiqueta <pasos_intermedios> para estructurar tu inferencia antes de generar la respuesta final. Dentro de esta etiqueta debes:\n"+
+"- Extraer y definir la \"necesidad raíz\" de la consulta del usuario.\n"+
+"- Abstraer el mecanismo de sostenibilidad requerido independiente de la industria.\n"+
+"- Escanear la <hoja_principal_iniciativas> buscando correspondencias con el mecanismo abstracto.\n"+
+"- Seleccionar un máximo de 3 iniciativas pertinentes y articular para ti mismo la justificación de la transferibilidad semántica.\n\n"+
+"PASO 2: Generación del Informe de Apoyo a la Decisión. Fuera de la etiqueta de procesamiento, genera la salida para el usuario utilizando exactamente el esquema detallado en <output_format>.\n"+
+"</execution_task>\n\n"+
+"<output_format>\n"+
+"Tu respuesta final visible al usuario debe formatearse estrictamente utilizando la siguiente jerarquía de Markdown, garantizando consistencia para la auditoría humana:\n\n"+
+"### Síntesis Estructural de la Necesidad\n"+
+"[Una o dos frases precisas resumiendo la abstracción del problema planteado por el usuario].\n\n"+
+"### Iniciativas Sugeridas por Similitud Semántica\n"+
+"[Para cada iniciativa seleccionada, presenta obligatoriamente la siguiente estructura:]\n\n"+
+"* **Nombre de la Iniciativa:** [Nombre exacto extraído de los datos]\n"+
+"* **Industria de Origen:** [Industria]\n"+
+"* **Taxonomía:** [Categoría según el diccionario de familias]\n"+
+"* **Análisis de Transferibilidad:** [Explicación de 2-3 frases sobre por qué esta iniciativa es semánticamente análoga a la necesidad del usuario y cómo su mecanismo operativo puede transferirse al contexto territorial planteado, citando explícitamente las variables de los datos que sustentan la conexión].\n\n"+
+"### Consideraciones Operativas y Limitaciones\n"+
+"[Si aplica, documenta cualquier advertencia de implementación, requerimientos de escala o limitaciones geográficas basadas estrictamente en la información contenida en las fuentes de datos].\n"+
+"</output_format>";
 
 /* primer paso: el modelo lee el catálogo completo y elige por sentido, sin búsqueda por palabras clave */
 var SELECTOR =
@@ -343,24 +386,40 @@ function addBot(){ var d=el('div','turn'); d.appendChild(el('div','who','Asisten
 function paintProse(t,txt){ t.classList.remove('thinking'); t.innerHTML='';
   txt.split(/\n\s*\n/).forEach(function(p){ if(p.trim()) t.appendChild(el('p',null,p.trim())); }); }
 
+var FRASE_SIN_MATCH = 'Basado en los datos disponibles en el repositorio, no existen iniciativas que se alineen semánticamente con los requerimientos planteados.';
+
 function parse(text){
-  var out={prosa:'',casos:[],bloque:{}};
-  var mP=text.match(/PROSA\s*([\s\S]*?)(?=\nCASO |\nBLOQUE|$)/);
-  out.prosa = mP ? mP[1].trim() : '';
-  var re=/CASO\s+(C\d+)\s*([\s\S]*?)(?=\nCASO |\nBLOQUE|$)/g, m;
-  while((m=re.exec(text))!==null){
-    var o={id:m[1]}, body=m[2];
-    body.split('\n').forEach(function(line){
-      var f=line.match(/^\s*(Estado|Que se hizo|Qué se hizo|Comunes|Diferencias|No declarado|Lectura)\s*:\s*(.*)$/i);
-      if(f) o[f[1].toLowerCase().replace('qué','que')]=f[2].trim();
-    });
-    out.casos.push(o);
+  var out={prosa:'',iniciativas:[],consideraciones:'',refusal:false};
+  var clean = text.replace(/<pasos_intermedios[^>]*>[\s\S]*?(<\/pasos_intermedios>|$)/gi,'').trim();
+
+  if(clean.indexOf(FRASE_SIN_MATCH) >= 0){
+    out.refusal = true;
+    out.prosa = FRASE_SIN_MATCH;
+    return out;
   }
-  var mB=text.match(/BLOQUE\s*([\s\S]*)$/);
-  if(mB) mB[1].split('\n').forEach(function(line){
-    var f=line.match(/^\s*([A-Za-zÁÉÍÓÚáéíóúñÑ ]{3,30}):\s*(.*)$/);
-    if(f) out.bloque[f[1].trim().toLowerCase()]=f[2].trim();
-  });
+
+  var mP = clean.match(/###\s*Síntesis Estructural de la Necesidad\s*([\s\S]*?)(?=\n###|$)/i);
+  out.prosa = mP ? mP[1].trim() : '';
+
+  var mI = clean.match(/###\s*Iniciativas Sugeridas por Similitud Semántica\s*([\s\S]*?)(?=\n###|$)/i);
+  if(mI){
+    mI[1].split(/(?=\*\s*\*\*Nombre de la Iniciativa\s*:\*\*)/i).map(function(s){return s.trim();}).filter(Boolean)
+    .forEach(function(chunk){
+      var o={};
+      var lineRe=/\*\s*\*\*(Nombre de la Iniciativa|Industria de Origen|Taxonom[ií]a|An[aá]lisis de Transferibilidad)\s*:\*\*\s*([\s\S]*?)(?=\n\s*\*\s*\*\*|$)/gi, m;
+      while((m=lineRe.exec(chunk))!==null){
+        var key=m[1].toLowerCase(), val=m[2].trim();
+        if(key.indexOf('nombre')>=0) o.nombre=val;
+        else if(key.indexOf('industria')>=0) o.industria=val;
+        else if(key.indexOf('taxonom')>=0) o.taxonomia=val;
+        else if(key.indexOf('transferibilidad')>=0) o.analisis=val;
+      }
+      if(o.nombre) out.iniciativas.push(o);
+    });
+  }
+
+  var mC = clean.match(/###\s*Consideraciones Operativas y Limitaciones\s*([\s\S]*)$/i);
+  out.consideraciones = mC ? mC[1].trim() : '';
   return out;
 }
 
@@ -369,14 +428,13 @@ function paintFull(container, text, contexto){
   container.innerHTML='';
   var pr = el('div','prose'); container.appendChild(pr);
   paintProse(pr, d.prosa || text.slice(0,600));
+  if(d.refusal) return;
 
-  d.casos.forEach(function(o){
-    var c = CASOS.filter(function(x){return x.id===o.id;})[0];
-    if(!c) return;
+  d.iniciativas.forEach(function(o){
     var box = el('div','caso');
     var hd = el('div','hd');
-    hd.appendChild(el('h4',null,c.ini));
-    hd.appendChild(el('p','meta', c.act+' · '+c.ind+' · '+c.ter+' · '+c.fam));
+    hd.appendChild(el('h4',null,o.nombre));
+    hd.appendChild(el('p','meta', [o.industria,o.taxonomia].filter(Boolean).join(' · ')));
     var tags = el('p','meta');
     tags.style.marginTop='6px';
     tags.appendChild(el('span','tag','Revisión humana requerida'));
@@ -385,47 +443,30 @@ function paintFull(container, text, contexto){
     box.appendChild(hd);
 
     var rows = el('div','rows');
-    [['que se hizo','Qué se hizo, según el registro'],['comunes','Variables comunes'],
-     ['diferencias','Diferencias encontradas'],['no declarado','Dimensiones no declaradas']]
+    [['analisis','Análisis de transferibilidad']]
     .forEach(function(p){
       if(!o[p[0]]) return;
       var r=el('div','row'); r.appendChild(el('div','k',p[1])); r.appendChild(el('div','v',o[p[0]])); rows.appendChild(r);
     });
     box.appendChild(rows);
 
-    if(o.lectura){
-      var parts = o.lectura.split('::');
-      var head = (parts[0]||'').trim().toUpperCase();
-      var esLimite = head.indexOf('LIMITE')>=0 || head.indexOf('LÍMITE')>=0;
-      var v = el('div','verdict '+(esLimite?'limite':'cond'));
-      v.appendChild(el('b',null, esLimite?'Límite de transferencia':'Condiciones por verificar antes de decidir'));
-      v.appendChild(el('div',null,(parts.slice(1).join('::')||parts[0]).trim()));
-      box.appendChild(v);
-    }
+    var v = el('div','verdict cond');
+    v.appendChild(el('b',null,'Condiciones por verificar antes de decidir'));
+    v.appendChild(el('div',null,'Este registro no declara fuente ni resultado medido: verifique escala, socio ejecutor y territorio antes de usarlo como ejemplo.'));
+    box.appendChild(v);
+
+    var optRow = el('div','row'), optV = el('div','v'), opts = el('div','opts');
+    var btn = el('button',null,'Registrar uso de esta iniciativa');
+    btn.addEventListener('click',function(){ registrar('Usar como ejemplo: '+o.nombre, contexto); });
+    opts.appendChild(btn);
+    optV.appendChild(opts); optRow.appendChild(optV); box.appendChild(optRow);
+
     container.appendChild(box);
   });
 
-  var b=d.bloque;
-  if(Object.keys(b).length){
+  if(d.consideraciones){
     var blk=el('div','block');
-    [['hojas leidas','Hojas leídas'],['hojas leídas','Hojas leídas'],['estado general','Estado general'],['evidencia utilizada','Evidencia utilizada'],['regla aplicada','Regla aplicada'],
-     ['resultado provisional','Resultado provisional'],['no puede concluirse','Qué no puede concluirse']]
-    .forEach(function(p){
-      if(!b[p[0]]) return;
-      if(p[1]==='Hojas leídas' && blk.querySelector('.hojas')) return;
-      var r=el('div','row'+(p[1]==='Hojas leídas'?' hojas':'')); r.appendChild(el('div','k',p[1])); r.appendChild(el('div','v',b[p[0]])); blk.appendChild(r);
-    });
-    if(b['opciones']){
-      var r=el('div','row'); r.appendChild(el('div','k','Opciones que usted conserva'));
-      var v=el('div','v'), opts=el('div','opts');
-      b['opciones'].split(';').forEach(function(o){
-        o=o.trim(); if(!o) return;
-        var btn=el('button',null,o.charAt(0).toUpperCase()+o.slice(1));
-        btn.addEventListener('click',function(){ registrar(o,contexto); });
-        opts.appendChild(btn);
-      });
-      v.appendChild(opts); r.appendChild(v); blk.appendChild(r);
-    }
+    var r=el('div','row'); r.appendChild(el('div','k','Consideraciones operativas y limitaciones')); r.appendChild(el('div','v',d.consideraciones)); blk.appendChild(r);
     container.appendChild(blk);
   }
 }
@@ -533,7 +574,7 @@ async function enviar(text){
     var res;
     try{
       res = await backend(input,{cache:false, onText:function(u){
-        var m=u.text.match(/PROSA\s*([\s\S]*?)(?=\nCASO |$)/);
+        var m=u.text.match(/###\s*Síntesis Estructural de la Necesidad\s*([\s\S]*?)(?=\n###|$)/i);
         if(m && m[1].trim()) paintProse(slot.prose, m[1].trim());
       }});
     }catch(e1){
@@ -543,7 +584,7 @@ async function enviar(text){
         slot.prose.textContent='La respuesta se cortó. Reintentando con tres casos en vez de '+cands.length+'…';
         input[1].content = fuentesBloque(pocos.map(casoTxt).join('\n'), pocos.length) + persona;
         res = await backend(input,{cache:false, onText:function(u){
-          var m=u.text.match(/PROSA\s*([\s\S]*?)(?=\nCASO |$)/);
+          var m=u.text.match(/###\s*Síntesis Estructural de la Necesidad\s*([\s\S]*?)(?=\n###|$)/i);
           if(m && m[1].trim()) paintProse(slot.prose, m[1].trim());
         }});
       } else { throw e1; }
