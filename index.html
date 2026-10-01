@@ -269,7 +269,7 @@ var REGLAS =
 "- Extraer y definir la \"necesidad raíz\" de la consulta del usuario.\n"+
 "- Abstraer el mecanismo de sostenibilidad requerido independiente de la industria.\n"+
 "- Escanear la <hoja_principal_iniciativas> buscando correspondencias con el mecanismo abstracto.\n"+
-"- Seleccionar un máximo de 3 iniciativas pertinentes y articular para ti mismo la justificación de la transferibilidad semántica.\n\n"+
+"- Seleccionar un máximo de 10 iniciativas pertinentes y articular para ti mismo la justificación de la transferibilidad semántica.\n\n"+
 "PASO 2: Generación del Informe de Apoyo a la Decisión. Fuera de la etiqueta de procesamiento, genera la salida para el usuario utilizando exactamente el esquema detallado en <output_format>.\n"+
 "</execution_task>\n\n"+
 "<output_format>\n"+
@@ -297,7 +297,7 @@ var SELECTOR =
 "Juzga por el sentido, no por coincidencia de palabras: una iniciativa puede servir aunque use otros términos, y puede no servir aunque comparta palabras. Considera las dos industrias, sea cual sea la industria de la persona.\n\n"+
 "Si la consulta no describe ninguna iniciativa ni necesidad (por ejemplo, un saludo), no elijas: pide una sola aclaración breve, en segunda persona.\n\n"+
 "Responde solo con un objeto JSON:\n"+
-'{"tipo":"buscar"|"aclarar","ids":[hasta 6 ids, del más al menos parecido],"necesidad":string|null,"industria":string|null,"territorio":string|null,"pregunta":string|null}\n'+
+'{"tipo":"buscar"|"aclarar","ids":[hasta 10 ids, del más al menos parecido],"necesidad":string|null,"industria":string|null,"territorio":string|null,"pregunta":string|null}\n'+
 '"necesidad" resume en una frase qué busca la persona. "industria" y "territorio" son los de la persona, si los dijo.';
 
 /* ---------- backend: runtime de claude.ai o llave propia ---------- */
@@ -324,7 +324,7 @@ function apiBackend(){
       method:'POST',
       headers:{'content-type':'application/json','x-api-key':getKey(),
                'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body: JSON.stringify({model: opts.modelTier==='quick' ? QUICK_MODEL : getModel(), max_tokens:8000, messages:merged})
+      body: JSON.stringify({model: opts.modelTier==='quick' ? QUICK_MODEL : getModel(), max_tokens:16000, messages:merged})
     });
     if(!r.ok){
       var body = await r.text();
@@ -556,7 +556,7 @@ async function enviar(text){
     }
 
     var cands = (it.ids||[]).map(function(id){ return CASO_POR_ID[String(id).trim()]; })
-                            .filter(Boolean).slice(0,6);
+                            .filter(Boolean).slice(0,10);
     var contexto = [it.necesidad, it.territorio].filter(Boolean).join(' · ') || 'Búsqueda de iniciativas';
     var repo = cands.length ? cands.map(casoTxt).join('\n')
              : 'La búsqueda no encontró ninguna iniciativa parecida en la base.';
@@ -579,9 +579,9 @@ async function enviar(text){
       }});
     }catch(e1){
       /* si se agotó el presupuesto, reintentar con menos casos: menos análisis, misma regla */
-      if(e1 && (e1.code==='truncated' || e1.code==='empty_response') && cands.length>3){
-        var pocos = cands.slice(0,3);
-        slot.prose.textContent='La respuesta se cortó. Reintentando con tres casos en vez de '+cands.length+'…';
+      if(e1 && (e1.code==='truncated' || e1.code==='empty_response') && cands.length>7){
+        var pocos = cands.slice(0,7);
+        slot.prose.textContent='La respuesta se cortó. Reintentando con siete casos en vez de '+cands.length+'…';
         input[1].content = fuentesBloque(pocos.map(casoTxt).join('\n'), pocos.length) + persona;
         res = await backend(input,{cache:false, onText:function(u){
           var m=u.text.match(/###\s*Síntesis Estructural de la Necesidad\s*([\s\S]*?)(?=\n###|$)/i);
